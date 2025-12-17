@@ -1,13 +1,13 @@
 apiVersion: kro.run/v1alpha1
 kind: ResourceGraphDefinition
 metadata:
-  name: my-application
+  name: my-application-sidecar
 spec:
   # kro uses this simple schema to create your CRD schema and apply it
   # The schema defines what users can provide when they instantiate the RGD (create an instance).
   schema:
     apiVersion: v1alpha1
-    kind: Application
+    kind: ApplicationSidecar
     spec:
       # Spec fields that users can provide.
       name: string
@@ -29,9 +29,18 @@ spec:
         apiVersion: apps/v1
         kind: Deployment
         metadata:
-          name: ${schema.spec.name} # Use the name provided by user
+          name: ${schema.spec.name}
+          ownerReferences:
+            - apiVersion: kro.run/v1alpha1
+              kind: ${schema.kind}
+              name: ${schema.metadata.name}
+              uid: ${schema.metadata.uid}
+              blockOwnerDeletion: true
+              controller: false
+          annotations:
+            argocd.argoproj.io/tracking-id: ${schema.metadata.?annotations["argocd.argoproj.io/tracking-id"]}
         spec:
-          replicas: ${schema.spec.replicas} # Use the replicas provided by user
+          replicas: ${schema.spec.replicas}
           selector:
             matchLabels:
               app: ${schema.spec.name}
@@ -42,7 +51,7 @@ spec:
             spec:
               containers:
                 - name: ${schema.spec.name}
-                  image: ${schema.spec.image} # Use the image provided by user
+                  image: ${schema.spec.image}
                   ports:
                     - containerPort: 80
                 - name: ${schema.spec.name}-sidecar
@@ -63,8 +72,17 @@ spec:
         kind: Service
         metadata:
           name: ${schema.spec.name}-svc
+          ownerReferences:
+            - apiVersion: kro.run/v1alpha1
+              kind: ${schema.kind}
+              name: ${schema.metadata.name}
+              uid: ${schema.metadata.uid}
+              blockOwnerDeletion: true
+              controller: false
+          annotations:
+            argocd.argoproj.io/tracking-id: ${schema.metadata.?annotations["argocd.argoproj.io/tracking-id"]}
         spec:
-          selector: ${deployment.spec.selector.matchLabels} # Use the deployment selector
+          selector: ${deployment.spec.selector.matchLabels}
           ports:
             - protocol: TCP
               port: 80
@@ -72,13 +90,21 @@ spec:
 
     - id: ingress
       includeWhen:
-        - ${schema.spec.ingress.enabled} # Only include if the user wants to create an Ingress
+        - ${schema.spec.ingress.enabled}
       template:
         apiVersion: networking.k8s.io/v1
         kind: Ingress
         metadata:
           name: ${schema.spec.name}-ingress
+          ownerReferences:
+            - apiVersion: kro.run/v1alpha1
+              kind: ${schema.kind}
+              name: ${schema.metadata.name}
+              uid: ${schema.metadata.uid}
+              blockOwnerDeletion: true
+              controller: false
           annotations:
+            argocd.argoproj.io/tracking-id: ${schema.metadata.?annotations["argocd.argoproj.io/tracking-id"]}
             kubernetes.io/ingress.class: alb
             alb.ingress.kubernetes.io/scheme: internet-facing
             alb.ingress.kubernetes.io/target-type: ip
@@ -93,7 +119,6 @@ spec:
                     pathType: Prefix
                     backend:
                       service:
-                        name: ${service.metadata.name} # Use the service name
+                        name: ${service.metadata.name}
                         port:
                           number: 80
-
