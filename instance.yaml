@@ -6,4 +6,4 @@ spec:
   name: my-app2
   replicas: 1
   ingress:
-    enabled: false
+    enabled: true
