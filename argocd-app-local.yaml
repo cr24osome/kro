@@ -1,0 +1,28 @@
+# Simpler ArgoCD Application for local testing
+# This is often easier than ApplicationSet for initial testing
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: kro-local-test
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/cr24osome/kro.git
+    targetRevision: HEAD
+    path: .
+    directory:
+      recurse: false
+      include: '*.yaml'
+      exclude: 'argocd-*.yaml'
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: default
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true  # Important for CRDs and kro resources
+
