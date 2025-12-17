@@ -1,0 +1,27 @@
+# ArgoCD Application for traditional nginx deployment
+# Apply this to create the app in ArgoCD
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: nginx-traditional
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/cr24osome/kro.git
+    targetRevision: HEAD
+    path: nginx-traditional
+    directory:
+      recurse: false
+      include: '*.yaml'
+      exclude: 'argocd-app.yaml'
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: default
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+
